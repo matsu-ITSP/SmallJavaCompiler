@@ -1,0 +1,18 @@
+sealed class Token {
+    object Semicolon : Token()
+    object DQuatation : Token()
+    object Print : Token()
+    object If : Token()
+    object Else : Token()
+    object For : Token()
+    data class Oprator(val op : Operator) : Token()
+    //data class Id(val name : String) : Token()
+    object Open : Token()
+    object Close : Token()
+    object OpenBra : Token()
+    object CloseBra : Token()
+    data class NumInt(val num : Int) : Token()
+    data class NumDouble(val num : Double) : Token()
+    //data class Type(val ty : Type) : Token()
+    data class Text(val text : String) : Token()
+}
