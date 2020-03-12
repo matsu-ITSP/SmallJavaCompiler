@@ -63,19 +63,20 @@ class Main{}
             「最後の"}"より後を削除」を二回
      */
     fun parser(item : String) : List<String>{
-        var itemMain = item
+        var code = item
             .substringBeforeLast('}')
             .substringBeforeLast('}')
             .substringAfter('{')
             .substringAfter('{')
         //演算子があれば前後に空白を入れる
         for(item in signs){
-            itemMain = itemMain.replace(item.toString() , " $item ")
+            code = code.replace(item.toString() , " $item ")
         }
+        //"==" -> "=  =" を戻す
         val twoSignsSpace = twoSigns.map{ it -> it[0] + "  " + it[1]}
         for(item in twoSignsSpace){
-            itemMain = itemMain.replace(item , item.replace("  ",""))
+            code = code.replace(item , item.replace("  ",""))
         }
         //スペース区切り
-        return itemMain.split(' ','\n')
+        return code.split(' ','\n').filter { it != "" }
     }
