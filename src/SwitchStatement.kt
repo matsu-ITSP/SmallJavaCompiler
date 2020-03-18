@@ -1,6 +1,6 @@
 data class SwitchStatement(
     val cond : Expression,
-    val sub: SwitchSub
+    val subs: List<SwitchSub>
 ){}
 sealed class SwitchSub{
     data class Case(val expression: Expression) : SwitchSub()

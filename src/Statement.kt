@@ -1,8 +1,8 @@
 sealed class Statement {
     data class VarDeclare(val var_declare : VarDeclaration) : Statement()
     data class Exp(val exp : Expression) : Statement()
-    data class StatementBlock(val state : Statement) : Statement()
-    data class If(val cond : Expression , val then_state : Statement , val else_state : Statement) : Statement()
+    data class StatementBlock(val state : List<Statement>?) : Statement()
+    data class If(val cond : Expression , val then_state : List<Statement> , val else_state : List<Statement>?) : Statement()
     data class Do(val cond: Expression , val state: Statement) : Statement()
     data class While(val cond: Expression , val state: Statement) : Statement()
     data class For(val for_state : ForStatement) : Statement()
@@ -13,6 +13,9 @@ sealed class Statement {
     data class Continue(val id: Identifier?) : Statement()
     object Semicolon : Statement()
 /*
+<> : 0回以上
+[] : 0,1回
+
 statement  =
 variable_declaration
  /  ( expression  ";"  )
@@ -26,19 +29,21 @@ variable_declaration
  /  * (  "synchronized"  "(" expression  ")" statement  )
  /  (  "return"  [ expression ]  ";"  )
  /  * (  "throw" expression ";"  )
- /  ( identifier  ":" statement )
+ /  ( identifier  ":" statement ) //ラベルつきwhileみたいな
  /  (  "break"  [ identifier ]  ";"  )
  /  (  "continue"  [ identifier ]  ";"  )
  /  (  ";"  )  .
 
  if_statement =
- "if"  "(" expression  ")" statement
- [  "else" statement ]  .
+ "if"  "(" expression  ")" "{" <statement> "}"
+ [  "else" "{" <statement> "}" ]  .
 
 do_statement =
- "do" statement  "while"  "(" expression  ")"  ";"  .
+ "do" "{" <statement> "}"  "while"  "(" expression  ")"  ";"  .
 
 while_statement =
- "while"  "(" expression  ")" statement  .
+ "while"  "(" expression  ")" "{" <statement> "}" .
+
+ statement_block  =  "{"  < statement >  "}"  .
  */
 }
