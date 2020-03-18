@@ -72,6 +72,7 @@ fun tokenize(splitedCode : List<String>) : List<Token>{
             "--" -> Token.Oprator(Operator.MM)
             "&&" -> Token.Oprator(Operator.And)
             "||" -> Token.Oprator(Operator.Or)
+            "?"  -> Token.Oprator(Operator.Question)
             "!" -> Token.Oprator(Operator.Not)
             "==" -> Token.Oprator(Operator.Equal)
             "!=" -> Token.Oprator(Operator.NotEqual)
@@ -96,6 +97,15 @@ fun getPareClose(tokens : List<Token> , openToken: Token, closeToken: Token , be
     for(i in beginIndex until tokens.count()){
         if(tokens[i] == openToken) depth++
         else if(tokens[i] == closeToken) depth--
+        if(depth==0) return i
+    }
+    return -1
+}
+fun getPareCloseLists(tokens : List<Token> , openTokens: List<Token>, closeTokens: List<Token> , beginIndex:Int=0) : Int{
+    var depth = 0
+    for(i in beginIndex until tokens.count()){
+        if(openTokens.contains(tokens[i])) depth++
+        else if(closeTokens.contains(tokens[i])) depth--
         if(depth==0) return i
     }
     return -1
@@ -191,7 +201,7 @@ fun parse(tokens : List<Token>) : Statement{
 
     fun parseStatement(tokens : List<Token>) : Statement{
         fun parseSwitchStatement(tokens: List<Token>) : SwitchStatement{
-            fun parseSwitchSub(tokens: List<Token>) : SwitchSub{
+            /* fun parseSwitchSub(tokens: List<Token>) : SwitchSub{
                 return when(tokens[0]){
                     Token.Case -> {
                         if(tokens[tokens.count()-1] != Token.Colon) throw Exception("Case statement but not end :")
@@ -203,7 +213,7 @@ fun parse(tokens : List<Token>) : Statement{
                     }
                     else -> SwitchSub.State(parseStatement(tokens))
                 }
-            }
+            } */
             var index = 0;
             if(tokens[index] != Token.Switch) throw Exception("SwitchStatement but not start Switch")
             index++
@@ -213,12 +223,37 @@ fun parse(tokens : List<Token>) : Statement{
             index++
             if(tokens[index] != Token.OpenBra) throw Exception("SwitchStatement but after cond not {")
             index++
-            var switchSubs : List<SwitchSub> = listOf<SwitchSub>()
-            while(tokens[index] != Token.CloseBra){
+            val switchSubs : MutableList<SwitchSub> = mutableListOf<SwitchSub>()
+            poi@while(true){
                 when(tokens[index]){
-
+                    is Token.Case ->{
+                        val indexOfCase = index
+                        index = getPareCloseLists(
+                            tokens ,
+                            listOf(Token.Oprator(Operator.Question) , Token.Case),
+                            listOf(Token.Colon),
+                            index
+                        )
+                        switchSubs.add(SwitchSub.Case(parseExpression(tokens.subList(indexOfCase,index))))
+                        index++
+                    }
+                    is Token.Default ->{
+                        index++
+                        if(tokens[index] != Token.Colon)
+                            throw Exception("It is not Default:")
+                        switchSubs.add(SwitchSub.Default)
+                        index++
+                    }
+                    is Token.CloseBra -> break@poi;
+                    else ->{
+                        val indexOfStartStatement = index
+                        index = getIndexOfEndStatement(tokens , indexOfStartStatement)
+                        switchSubs.add(SwitchSub.State(parseStatement(tokens.subList(indexOfStartStatement , index))))
+                        index++
+                    }
                 }
             }
+            return SwitchStatement(condExp , switchSubs)
         }
         return when(tokens[0]){
             //Label , VarDeclare

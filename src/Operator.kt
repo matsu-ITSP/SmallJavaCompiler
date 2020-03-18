@@ -14,6 +14,7 @@ sealed class Operator {
     object Not : Operator()
     object Equal : Operator()
     object NotEqual : Operator()
+    object Question : Operator()
 
     object Less : Operator()
     object Greater : Operator()
