@@ -10,7 +10,7 @@ data class ForStatement(
 for_statement =
  "for"  "("  ( variable_declaration  / * ( expression  ";"  )  /  ";"  )
  [ expression ]  ";"
- [ expression ]  ";"
+ [ expression ]
  ")" statement  .
 
  */

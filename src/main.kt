@@ -186,15 +186,14 @@ fun parse(tokens : List<Token>) : Statement{
     fun parseExpression(tokens: List<Token>) : Expression{
 
     }
-    fun parseForStatement(tokens: List<Token>) : ForStatement{
-
-    }
-    fun parseIdentifier(token: Token) : Identifier{
-
-    }
     fun parseVarDeclare(tokens : List<Token>) : VarDeclaration{
 
     }
+
+    fun parseIdentifier(token: Token) : Identifier{
+
+    }
+
     fun parseStatementBlock(tokens : List<Token>) : List<Statement>{
 
     }
@@ -254,6 +253,26 @@ fun parse(tokens : List<Token>) : Statement{
                 }
             }
             return SwitchStatement(condExp , switchSubs)
+        }
+        fun parseForStatement(tokens: List<Token>) : ForStatement{
+            var index = 0;
+            if(tokens[index] != Token.For) throw Exception("Statement for but no for")
+            index++;
+            if (tokens[index] != Token.Open) throw Exception("Statement for but no for(")
+            if (!tokens.contains(Token.Semicolon)) throw Exception("Statement for but no ;")
+            index=tokens.indexOf(Token.Semicolon)
+            val varDeclare = if(index!=2) parseVarDeclare(tokens.subList(2,index-1)) else null
+            index++
+            val indexOfExp1 = index
+            index += tokens.drop(index).indexOf(Token.Semicolon)
+            if (index+1 == indexOfExp1) throw Exception("Statement for but no for(;;")
+            val exp1 = if(index != indexOfExp1)parseExpression(tokens.subList(indexOfExp1,index-1)) else null
+            val indexOfExp2 = index+1
+            index = tokens.indexOf(Token.Close)
+            if (index+1 == indexOfExp2) throw Exception("Statement for but no for(;;)")
+            val exp2 = if (index != indexOfExp2)parseExpression(tokens.subList(indexOfExp2,index-1)) else null
+            val statement = parseStatement(tokens.subList(index+1 , tokens.count()-1))
+            return ForStatement(varDeclare , exp1,exp2,statement)
         }
         return when(tokens[0]){
             //Label , VarDeclare
