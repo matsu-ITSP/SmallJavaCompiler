@@ -9,3 +9,5 @@ if_statement =
   [  "else" statement_block ]  .
   
   for,do,whileも同じ
+  
+  配列は未実装

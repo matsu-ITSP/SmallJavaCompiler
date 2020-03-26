@@ -1,8 +1,7 @@
-sealed class Type {
-    object Boolean : Type()
-    object Char : Type()
-    object Int : Type()
-    object Double : Type()
+data class Type(
+    val name : String
+) {
+
 /*
 type_specifier =
  "boolean"

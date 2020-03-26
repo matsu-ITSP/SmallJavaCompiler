@@ -3,7 +3,7 @@ class Main {}
 private val signs = arrayOf(
     '+', '-', '*', '/', '%',
     '&', '|', '!', '=', '<', '>',
-    ';', ':', '"', '(', ')', '{', '}'
+    ';', ':', '"', '(', ')', '{', '}' , ','
 )
 private val twoSigns = arrayOf(
     "+=", "-=", "*=", "/=", "%=", "++", "--",
@@ -40,6 +40,7 @@ fun tokenize(splitedCode : List<String>) : List<Token>{
         when(it){
             ";" -> Token.Semicolon
             ":" -> Token.Colon
+            "," -> Token.Comma
             "\"" -> Token.DQuatation
             "System.out.println" -> Token.Print
             "if" -> Token.If
@@ -55,6 +56,16 @@ fun tokenize(splitedCode : List<String>) : List<Token>{
             "continue" -> Token.Continue
             "true" -> Token.True
             "false" -> Token.False
+            "public" -> Token.Public
+            "protected" -> Token.Protected
+            "private" -> Token.Private
+            "static" -> Token.Static
+            "final" -> Token.Final
+            "native" -> Token.Native
+            "synchronized" -> Token.Synchronized
+            "abstract" -> Token.Abstract
+            "threadsafe" -> Token.Threadsafe
+            "transient" -> Token.Transient
             "(" -> Token.Open
             ")" -> Token.Close
             "{" -> Token.OpenBra
@@ -187,16 +198,57 @@ fun parse(tokens : List<Token>) : Statement{
 
     }
     fun parseVarDeclare(tokens : List<Token>) : VarDeclaration{
+        fun parseVarDeclarator(tokens: List<Token>) : VariableDeclarator{
+            var index = 0
+            if(tokens[index] !is Token.Text) throw Exception("VarDeclarator but no text")
+            val id = Identifier((tokens[index] as Token.Text).text)
+            if(tokens.count() == 1) return VariableDeclarator(id,null)
+            index++
+            if(tokens[index] != Token.Oprator(Operator.Assign))
+                throw Exception("VarDeclarator with 2 tokens but no assign")
+            return VariableDeclarator(id , VariableInitializer.Exp(parseExpression(tokens.drop(2))))
+        }
+        val allModifiers = listOf<Token>(
+            Token.Public , Token.Private , Token.Protected , Token.Static ,
+            Token.Final , Token.Native , Token.Synchronized , Token.Abstract ,
+            Token.Threadsafe , Token.Transient
+        )
 
+        val modifiers : MutableList<Modifier> = mutableListOf()
+        var index = 0
+        while(allModifiers.contains(tokens[index])){
+            modifiers.add(
+                when(tokens[index]){
+                    Token.Public -> Modifier.Public
+                    Token.Private -> Modifier.Private
+                    Token.Protected -> Modifier.Protected
+                    Token.Static -> Modifier.Static
+                    Token.Final -> Modifier.Final
+                    Token.Native -> Modifier.Native
+                    Token.Synchronized -> Modifier.Synchronized
+                    Token.Abstract -> Modifier.Abstract
+                    Token.Threadsafe -> Modifier.Threadsafe
+                    Token.Transient -> Modifier.Transient
+                    else -> throw Exception("")
+                }
+            )
+        }
+        if(tokens[index] !is Token.Text) throw Exception("VarDeclaration but no type")
+        val ty = Type((tokens[index] as Token.Text).text)
+        index++
+        val declarators : MutableList<VariableDeclarator> = mutableListOf()
+        do {
+            val commaIndex = tokens.indexOf(Token.Comma)-1
+            val endIndex = if(commaIndex != -2) commaIndex else tokens.indexOf(Token.Semicolon)-1
+            declarators.add(parseVarDeclarator(tokens.subList(index , endIndex)))
+            index = endIndex + 1
+        }while(tokens[index] == Token.Comma)
+        if(tokens[index] != Token.Semicolon) throw Exception("VarDeclaration but no ;")
+        return VarDeclaration(modifiers , ty , declarators)
     }
 
-    fun parseIdentifier(token: Token) : Identifier{
-
-    }
-
-    fun parseStatementBlock(tokens : List<Token>) : List<Statement>{
-
-    }
+    fun parseIdentifier(token: Token) : Identifier =
+        if (token is Token.Text) Identifier(token.text) else throw Exception("id but not text")
 
     fun parseStatement(tokens : List<Token>) : Statement{
         fun parseSwitchStatement(tokens: List<Token>) : SwitchStatement{
@@ -273,6 +325,21 @@ fun parse(tokens : List<Token>) : Statement{
             val exp2 = if (index != indexOfExp2)parseExpression(tokens.subList(indexOfExp2,index-1)) else null
             val statement = parseStatement(tokens.subList(index+1 , tokens.count()-1))
             return ForStatement(varDeclare , exp1,exp2,statement)
+        }
+        fun parseStatementBlock(tokens : List<Token>) : List<Statement>{
+            val statements = mutableListOf<Statement>()
+            if (tokens[0] != Token.OpenBra || tokens[tokens.count()-1] != Token.CloseBra)
+                throw Exception("StatementBlock but not {}")
+            if(tokens.count() == 2) return statements
+            var startStatement = 1
+            var endStatement = getIndexOfEndStatement(tokens,startStatement)
+            while (true){
+                statements.add(parseStatement(tokens.subList(startStatement,endStatement)))
+                startStatement = endStatement+1
+                if (tokens[startStatement] == Token.CloseBra) break
+                endStatement = getIndexOfEndStatement(tokens,startStatement)
+            }
+            return statements
         }
         return when(tokens[0]){
             //Label , VarDeclare

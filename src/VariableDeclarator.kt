@@ -4,6 +4,6 @@ data class VariableDeclarator (
 ){
 /*
 variable_declarator  =
- identifier  <  "["  "]"  >  [  "=" variable_initializer ]  .
+ identifier  < * "["  "]"  >  [  "=" variable_initializer ]  .
  */
 }

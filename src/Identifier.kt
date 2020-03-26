@@ -1,3 +1,2 @@
-sealed class Identifier {
-    data class Id(val name : String) : Identifier()
+data class Identifier(val name : String) {
 }
