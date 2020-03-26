@@ -1,3 +1,5 @@
+import java.util.*
+
 class Main {}
 
 private val signs = arrayOf(
@@ -195,8 +197,30 @@ fun getIndexOfEndStatement(tokens: List<Token> , beginIndex: Int = 0) : Int{
 }
 fun parse(tokens : List<Token>) : Statement{
     fun parseExpression(tokens: List<Token>) : Expression{
+        val output : List<> //Token.num or Expression
+        val stackOp : Stack<Operator>
+        while(){
 
+        }
     }
+/*
+x0: ()
+x1: 左  ++  --(後置き)
+x2: 右  ! - (単項演算子)  ++  --(前置き)
+x3: 左  *  /  %
+x4: 左  +  - (算術演算子)
+x5: 左  >  >=  <  <=
+x6: 左  ==  !=
+x7: 左  &&
+x8: 左  ||
+x9: 右  ?:
+x10:右  =  ope=
+
+exp = x0
+x0 = "(" x0 ")"
+x1 = x1 "++" / x1 "--" / x2
+x2 = !
+ */
     fun parseVarDeclare(tokens : List<Token>) : VarDeclaration{
         fun parseVarDeclarator(tokens: List<Token>) : VariableDeclarator{
             var index = 0
