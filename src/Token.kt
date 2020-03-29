@@ -1,6 +1,6 @@
 sealed class Token {
     object Semicolon : Token()
-    object DQuatation : Token()
+    //object DQuatation : Token()
     object Colon : Token()
     object Comma : Token()
     object Print : Token()
@@ -27,6 +27,7 @@ sealed class Token {
     object Transient : Token()
     object True : Token()
     object False : Token()
+    object Null : Token()
     data class Oprator(val op : Operator) : Token()
     //data class Id(val name : String) : Token()
     object Open : Token()
@@ -35,6 +36,7 @@ sealed class Token {
     object CloseBra : Token()
     data class NumInt(val num : Int) : Token()
     data class NumDouble(val num : Double) : Token()
+    data class Str(val str: String ): Token()
     //data class Type(val ty : Type) : Token()
     data class Text(val text : String) : Token()
 }

@@ -1,11 +1,15 @@
 sealed class Expression {
-    data class NumExp(val num_exp : NumericExpression) : Expression()
-    data class TestExp(val test_exp : TestExpression) : Expression()
-    data class LogicExp(val logic_exp : LogicExpression) : Expression()
-    data class StrExp(val str_exp : StringExpression) : Expression()
+    data class Calculate(
+        val op : Operator ,
+        val exp1: Expression ,
+        val exp2: Expression? = null,
+        val exp3: Expression? = null
+    ) : Expression()
     object ExpNull : Expression()
     data class Id(val id : Identifier) : Expression()
-    data class ParenthesisExp(val exp : Expression) : Expression()
+    data class IntValue(val num : Int) : Expression()
+    data class DoubleValue(val num : Double) : Expression()
+    data class StringValue(val str : String) : Expression()
     /*
     expression  =
    numeric_expression
@@ -15,7 +19,9 @@ sealed class Expression {
  / *bit_expression
  / *casting_expression
  / *creating_expression
- / *literal_expression
+ / intValue
+ / doubleValue
+ / Text
  /  "null"
  / * "super"
  / * "this"

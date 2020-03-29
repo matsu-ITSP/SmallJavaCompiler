@@ -38,12 +38,26 @@ fun lex(item: String): List<String> {
     return code.split(' ', '\n').filter { it != "" }
 }
 fun tokenize(splitedCode : List<String>) : List<Token>{
-    return splitedCode.map {
+    //{ x , " , a , b , " , y } -> { x , "ab" , y }
+    fun stringnize(splitedCode: List<String>) : List<String>{
+        fun margeString(code : List<String>) : String
+                = code.fold(""){initial , value -> initial+value}
+        fun f(remainCode : List<String>) : List<String>{
+            return if(remainCode[0] != "\"")
+                listOf(remainCode[0]).plus(f(remainCode.drop(1)))
+            else {
+                val endpoint = remainCode.drop(1).indexOf("\"")+1
+                listOf(margeString(remainCode.subList( 0,endpoint )))
+                    .plus(f(remainCode.drop(endpoint)))
+            }
+        }
+        return f(splitedCode)
+    }
+    return stringnize(splitedCode).map {
         when(it){
             ";" -> Token.Semicolon
             ":" -> Token.Colon
             "," -> Token.Comma
-            "\"" -> Token.DQuatation
             "System.out.println" -> Token.Print
             "if" -> Token.If
             "else" -> Token.Else
@@ -58,6 +72,7 @@ fun tokenize(splitedCode : List<String>) : List<Token>{
             "continue" -> Token.Continue
             "true" -> Token.True
             "false" -> Token.False
+            "null" -> Token.Null
             "public" -> Token.Public
             "protected" -> Token.Protected
             "private" -> Token.Private
@@ -85,7 +100,7 @@ fun tokenize(splitedCode : List<String>) : List<Token>{
             "--" -> Token.Oprator(Operator.MM)
             "&&" -> Token.Oprator(Operator.And)
             "||" -> Token.Oprator(Operator.Or)
-            "?"  -> Token.Oprator(Operator.Question)
+            //"?"  -> Token.Oprator(Operator.Question)
             "!" -> Token.Oprator(Operator.Not)
             "==" -> Token.Oprator(Operator.Equal)
             "!=" -> Token.Oprator(Operator.NotEqual)
@@ -100,7 +115,10 @@ fun tokenize(splitedCode : List<String>) : List<Token>{
             "/=" -> Token.Oprator(Operator.DivAssign)
             "%=" -> Token.Oprator(Operator.ModAssign)
 
-            else -> Token.Text(it)
+            else -> {
+                if (it.contains("\"")) Token.Str(it.drop(1).dropLast(1))
+                else Token.Text(it)
+            }
         }
     }
 }
@@ -197,30 +215,129 @@ fun getIndexOfEndStatement(tokens: List<Token> , beginIndex: Int = 0) : Int{
 }
 fun parse(tokens : List<Token>) : Statement{
     fun parseExpression(tokens: List<Token>) : Expression{
-        val output : List<> //Token.num or Expression
-        val stackOp : Stack<Operator>
-        while(){
 
+        fun getPriority(op : Operator , isRight : Boolean = false) : Int{
+            return when(op){
+                Operator.Plus -> 6
+                Operator.Minus -> if (isRight) 8 else 6
+                Operator.MinusRight -> 8
+                Operator.Mult -> 7
+                Operator.Div -> 7
+                Operator.Mod -> 7
+                Operator.PP -> if (isRight) 8 else 9
+                Operator.PPRight -> 8
+                Operator.MM -> if (isRight) 8 else 9
+                Operator.MMRight -> 8
+                Operator.And -> 3
+                Operator.Or -> 2
+                Operator.Not -> 8
+                Operator.Equal -> 4
+                Operator.NotEqual -> 4
+                Operator.Less -> 5
+                Operator.Greater -> 5
+                Operator.LessEq -> 5
+                Operator.GreaterEq -> 5
+                Operator.Assign -> 1
+                Operator.PlusAssign -> 1
+                Operator.MinusAssign -> 1
+                Operator.MultAssign -> 1
+                Operator.DivAssign -> 1
+                Operator.ModAssign -> 1
+                Operator.Open , Operator.Close-> throw Exception("it cant be ( or )")
+            }
         }
-    }
-/*
-x0: ()
-x1: 左  ++  --(後置き)
-x2: 右  ! - (単項演算子)  ++  --(前置き)
-x3: 左  *  /  %
-x4: 左  +  - (算術演算子)
-x5: 左  >  >=  <  <=
-x6: 左  ==  !=
-x7: 左  &&
-x8: 左  ||
-x9: 右  ?:
-x10:右  =  ope=
+        fun getArgument(op : Operator , isRight : Boolean = false) : Int{
+            return when(op){
+                Operator.Plus -> 2
+                Operator.Minus -> if (isRight) 1 else 2
+                Operator.MinusRight -> 1
+                Operator.Mult -> 2
+                Operator.Div -> 2
+                Operator.Mod -> 2
+                Operator.PP , Operator.PPRight-> 1
+                Operator.MM , Operator.MMRight-> 1
+                Operator.And -> 2
+                Operator.Or -> 2
+                Operator.Not -> 1
+                Operator.Equal -> 2
+                Operator.NotEqual -> 2
+                Operator.Less -> 2
+                Operator.Greater -> 2
+                Operator.LessEq -> 2
+                Operator.GreaterEq -> 2
+                Operator.Assign -> 2
+                Operator.PlusAssign -> 2
+                Operator.MinusAssign -> 2
+                Operator.MultAssign -> 2
+                Operator.DivAssign -> 2
+                Operator.ModAssign -> 2
+                Operator.Open , Operator.Close-> throw Exception("it cant be ( or )")
+            }
+        }
+        fun isRight(op : Operator , index : Int) : Boolean =
+            (op is Operator.PP || op is Operator.MM || op is Operator.Minus) &&
+                    (index == 0 || tokens[index-1] == Token.Open ||
+                            (tokens[index-1] is Operator &&
+                                    tokens[index-1] != Token.Oprator(Operator.PP) &&
+                                    tokens[index-1] != Token.Oprator(Operator.MM)))
 
-exp = x0
-x0 = "(" x0 ")"
-x1 = x1 "++" / x1 "--" / x2
-x2 = !
- */
+        val output : Stack<Expression> = Stack()
+        val stackOp : Stack<Operator> = Stack()
+        var index = 0
+        fun calculate(){
+            val op = stackOp.pop()
+            when(getArgument(op)){
+                1 -> output.push(Expression.Calculate(op,output.pop()))
+                2 -> output.push(Expression.Calculate(op,output.pop(),output.pop()))
+                3 -> output.push(Expression.Calculate(op,output.pop(),output.pop(),output.pop()))
+            }
+        }
+        //https://ja.wikipedia.org/wiki/%E6%93%8D%E8%BB%8A%E5%A0%B4%E3%82%A2%E3%83%AB%E3%82%B4%E3%83%AA%E3%82%BA%E3%83%A0
+        while(index < tokens.count()){
+            val t = tokens[index]
+            when(t){
+                is Token.NumInt -> output.push(Expression.IntValue(t.num))
+                is Token.NumDouble -> output.push(Expression.DoubleValue(t.num))
+                is Token.Text -> output.push(Expression.Id(Identifier(t.text)))
+                is Token.Null -> output.push(Expression.ExpNull)
+                is Token.Str -> output.push(Expression.StringValue(t.str))
+
+                is Token.Open -> stackOp.push(Operator.Open)
+                is Token.Close ->{
+                    while(stackOp.peek() != Operator.Open){
+                        if(stackOp.count() == 0) throw Exception("there is ) but no (")
+                        calculate()
+                    }
+                    stackOp.pop()
+                }
+                is Token.Oprator ->{
+                    val op = when{
+                        !isRight(t.op,index) -> t.op
+                        t.op == Operator.Minus -> Operator.MinusRight
+                        t.op == Operator.MM -> Operator.MMRight
+                        t.op == Operator.PP -> Operator.PPRight
+                        else -> throw Exception("something error on Operator in Expression")
+                    }
+                    //(最初にある || かっこの直後 || (8+-1の- && 8++-1は除く))は右結合
+                    val isRight = isRight(op,index)
+                    while(stackOp.count() > 0){
+                        val top = stackOp.peek()
+                        if(getPriority(op) < getPriority(top) || (!isRight && getPriority(op) == getPriority(top)))
+                            calculate()
+                        else break
+                    }
+                    stackOp.push(op)
+                }
+                else -> throw Exception("There is Expression but token is $t")
+            }
+            index++
+        }
+        while (stackOp.count() > 0){
+            calculate()
+        }
+        if(output.count() != 1) throw Exception("")
+        return output.pop()
+    }
     fun parseVarDeclare(tokens : List<Token>) : VarDeclaration{
         fun parseVarDeclarator(tokens: List<Token>) : VariableDeclarator{
             var index = 0
@@ -305,7 +422,7 @@ x2 = !
                         val indexOfCase = index
                         index = getPareCloseLists(
                             tokens ,
-                            listOf(Token.Oprator(Operator.Question) , Token.Case),
+                            listOf(Token.Case),
                             listOf(Token.Colon),
                             index
                         )
@@ -465,4 +582,5 @@ x2 = !
             else -> Statement.Exp(parseExpression(tokens))
         }
     }
+    return parseStatement(tokens)
 }
