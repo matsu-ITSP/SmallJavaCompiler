@@ -11,6 +11,7 @@ sealed class Statement {
     data class Label(val id : Identifier , val state : Statement) : Statement()
     data class Break(val id : Identifier?) : Statement()
     data class Continue(val id: Identifier?) : Statement()
+    data class Print(val exp: Expression) : Statement()
     object Semicolon : Statement()
 /*
 <> : 0回以上
@@ -26,6 +27,7 @@ variable_declaration
  /  ( for_statement )
  /  * ( try_statement )
  /  ( switch_statement )
+ /  ( "System.out.println" "(" expression ")" ";" )
  /  * (  "synchronized"  "(" expression  ")" statement  )
  /  (  "return"  [ expression ]  ";"  )
  /  * (  "throw" expression ";"  )

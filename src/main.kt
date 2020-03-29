@@ -43,12 +43,14 @@ fun tokenize(splitedCode : List<String>) : List<Token>{
         fun margeString(code : List<String>) : String
                 = code.fold(""){initial , value -> initial+value}
         fun f(remainCode : List<String>) : List<String>{
-            return if(remainCode[0] != "\"")
-                listOf(remainCode[0]).plus(f(remainCode.drop(1)))
-            else {
-                val endpoint = remainCode.drop(1).indexOf("\"")+1
-                listOf(margeString(remainCode.subList( 0,endpoint )))
-                    .plus(f(remainCode.drop(endpoint)))
+            return when {
+                remainCode.count()==0 -> listOf()
+                remainCode[0] != "\"" -> listOf(remainCode[0]).plus(f(remainCode.drop(1)))
+                else -> {
+                    val endpoint = remainCode.drop(1).indexOf("\"")+1
+                    listOf(margeString(remainCode.subList( 0,endpoint+1 )))
+                        .plus(f(remainCode.drop(endpoint+1)))
+                }
             }
         }
         return f(splitedCode)
@@ -141,79 +143,81 @@ fun getPareCloseLists(tokens : List<Token> , openTokens: List<Token>, closeToken
     }
     return -1
 }
-fun getIndexOfEndStatement(tokens: List<Token> , beginIndex: Int = 0) : Int{
-    return when(tokens[beginIndex]){
+fun getIndexOfEndStatement(tokens: List<Token>, beginIndex: Int = 0) : Int{
+    val droppedTokens = tokens.drop(beginIndex)
+    return beginIndex + when(droppedTokens[0]){
         //Label , VarDeclare
         is Token.Text -> {
-            if (tokens[1] == Token.Semicolon) //label
-                getIndexOfEndStatement(tokens.drop(2))
+            if (droppedTokens[1] == Token.Semicolon) //label
+                getIndexOfEndStatement(droppedTokens.drop(2))
             else //var_declare
-                tokens.indexOf(Token.Semicolon)
+                droppedTokens.indexOf(Token.Semicolon)
         }
         is Token.OpenBra -> //statementblock
-            getPareClose(tokens , Token.OpenBra , Token.CloseBra)
+            getPareClose(droppedTokens , Token.OpenBra , Token.CloseBra)
         is Token.If -> {
-            if(tokens[1] != Token.Open)
+            if(droppedTokens[1] != Token.Open)
                 throw Exception("IF Statement but it is not if (")
-            var index = getPareClose(tokens,Token.Open,Token.Close)
+            var index = getPareClose(droppedTokens,Token.Open,Token.Close)
             index++
-            if(tokens[index] != Token.OpenBra)
+            if(droppedTokens[index] != Token.OpenBra)
                 throw Exception("IF Statement but it is not if (){")
             val indexOpenBra = index
-            index = getPareClose(tokens , Token.OpenBra , Token.CloseBra , indexOpenBra)
-            if(index+1 == tokens.count() || tokens[index+1] != Token.Else) {
+            index = getPareClose(droppedTokens , Token.OpenBra , Token.CloseBra , indexOpenBra)
+            if(index+1 == droppedTokens.count() || droppedTokens[index+1] != Token.Else) {
                 index
-            } else if(tokens[index+1] == Token.Else) {
+            } else if(droppedTokens[index+1] == Token.Else) {
                 index += 2
-                if(tokens[index] != Token.OpenBra){
+                if(droppedTokens[index] != Token.OpenBra){
                     throw Exception("IF Statement but it is not if (){}else{}")
                 }
-                getPareClose(tokens , Token.OpenBra , Token.CloseBra , index)
+                getPareClose(droppedTokens , Token.OpenBra , Token.CloseBra , index)
             }else{
                 throw Exception("IF Statement but it is not if(){}else{}")
             }
         }
         //"do" "{" <statement> "}"  "while"  "(" expression  ")"  ";"  .
         is Token.Do ->{
-            if(tokens[1] != Token.OpenBra)
+            if(droppedTokens[1] != Token.OpenBra)
                 throw Exception("Do Statement but do{")
-            var index = getPareClose(tokens , Token.OpenBra , Token.CloseBra)
-            if(tokens[index+1] != Token.While || tokens[index+2] != Token.Open)
+            var index = getPareClose(droppedTokens , Token.OpenBra , Token.CloseBra)
+            if(droppedTokens[index+1] != Token.While || droppedTokens[index+2] != Token.Open)
                 throw Exception("Do Statement but do{}while(")
             index += 2
-            index = getPareClose(tokens , Token.Open , Token.Close , index)
-            if(tokens[index+1] != Token.Semicolon)
+            index = getPareClose(droppedTokens , Token.Open , Token.Close , index)
+            if(droppedTokens[index+1] != Token.Semicolon)
                 throw Exception("Do Statement but do{}while();")
             else index+1
         }
         //"while"  "(" expression  ")" "{" <statement> "}" .
         is Token.While ->{
             var index =1
-            if(tokens[index] != Token.Open)
+            if(droppedTokens[index] != Token.Open)
                 throw Exception("While Statement but while(")
-            index = getPareClose(tokens , Token.Open , Token.Close)
+            index = getPareClose(droppedTokens , Token.Open , Token.Close)
             index++
-            if(tokens[index] != Token.OpenBra)
+            if(droppedTokens[index] != Token.OpenBra)
                 throw Exception("While Statement but while(){")
-            getPareClose(tokens , Token.OpenBra , Token.CloseBra , index)
+            getPareClose(droppedTokens , Token.OpenBra , Token.CloseBra , index)
         }
-        is Token.For -> getIndexOfEndStatement(tokens , getPareClose(tokens , Token.Open , Token.Close)+1)
+        is Token.For -> getIndexOfEndStatement(droppedTokens , getPareClose(droppedTokens , Token.Open , Token.Close)+1)
         is Token.Switch ->
-            getPareClose(tokens , Token.OpenBra , Token.CloseBra , getPareClose(tokens , Token.Open , Token.Close))
+            getPareClose(droppedTokens , Token.OpenBra , Token.CloseBra , getPareClose(droppedTokens , Token.Open , Token.Close))
         is Token.Return -> {
-            tokens.indexOf(Token.Semicolon)
+            droppedTokens.indexOf(Token.Semicolon)
         }
         is Token.Break -> {
-            tokens.indexOf(Token.Semicolon)
+            droppedTokens.indexOf(Token.Semicolon)
         }
         is Token.Continue -> {
-            tokens.indexOf(Token.Semicolon)
+            droppedTokens.indexOf(Token.Semicolon)
         }
         is Token.Semicolon -> 1
-        else -> tokens.indexOf(Token.Semicolon)
+        else -> droppedTokens.indexOf(Token.Semicolon)
     }
 }
-fun parse(tokens : List<Token>) : Statement{
+fun parse(tokens : List<Token>) : List<Statement>{
+
     fun parseExpression(tokens: List<Token>) : Expression{
 
         fun getPriority(op : Operator , isRight : Boolean = false) : Int{
@@ -381,7 +385,7 @@ fun parse(tokens : List<Token>) : Statement{
         do {
             val commaIndex = tokens.indexOf(Token.Comma)-1
             val endIndex = if(commaIndex != -2) commaIndex else tokens.indexOf(Token.Semicolon)-1
-            declarators.add(parseVarDeclarator(tokens.subList(index , endIndex)))
+            declarators.add(parseVarDeclarator(tokens.subList(index , endIndex+1)))
             index = endIndex + 1
         }while(tokens[index] == Token.Comma)
         if(tokens[index] != Token.Semicolon) throw Exception("VarDeclaration but no ;")
@@ -397,7 +401,7 @@ fun parse(tokens : List<Token>) : Statement{
                 return when(tokens[0]){
                     Token.Case -> {
                         if(tokens[tokens.count()-1] != Token.Colon) throw Exception("Case statement but not end :")
-                        SwitchSub.Case(parseExpression(tokens.subList(1,tokens.count()-2)))
+                        SwitchSub.Case(parseExpression(tokens.subList(1,tokens.count()-1)))
                     }
                     Token.Default ->{
                         if(tokens[tokens.count()-1] != Token.Colon) throw Exception("Default statement but not end :")
@@ -411,7 +415,7 @@ fun parse(tokens : List<Token>) : Statement{
             index++
             if(tokens[index] != Token.Open) throw Exception("SwitchStatement but not 2nd (")
             index = getPareClose(tokens,Token.Open,Token.Close)
-            val condExp = parseExpression(tokens.subList(2,index))
+            val condExp = parseExpression(tokens.subList(2,index+1))
             index++
             if(tokens[index] != Token.OpenBra) throw Exception("SwitchStatement but after cond not {")
             index++
@@ -426,7 +430,7 @@ fun parse(tokens : List<Token>) : Statement{
                             listOf(Token.Colon),
                             index
                         )
-                        switchSubs.add(SwitchSub.Case(parseExpression(tokens.subList(indexOfCase,index))))
+                        switchSubs.add(SwitchSub.Case(parseExpression(tokens.subList(indexOfCase,index+1))))
                         index++
                     }
                     is Token.Default ->{
@@ -440,7 +444,7 @@ fun parse(tokens : List<Token>) : Statement{
                     else ->{
                         val indexOfStartStatement = index
                         index = getIndexOfEndStatement(tokens , indexOfStartStatement)
-                        switchSubs.add(SwitchSub.State(parseStatement(tokens.subList(indexOfStartStatement , index))))
+                        switchSubs.add(SwitchSub.State(parseStatement(tokens.subList(indexOfStartStatement , index+1))))
                         index++
                     }
                 }
@@ -454,17 +458,17 @@ fun parse(tokens : List<Token>) : Statement{
             if (tokens[index] != Token.Open) throw Exception("Statement for but no for(")
             if (!tokens.contains(Token.Semicolon)) throw Exception("Statement for but no ;")
             index=tokens.indexOf(Token.Semicolon)
-            val varDeclare = if(index!=2) parseVarDeclare(tokens.subList(2,index-1)) else null
+            val varDeclare = if(index!=2) parseVarDeclare(tokens.subList(2,index)) else null
             index++
             val indexOfExp1 = index
             index += tokens.drop(index).indexOf(Token.Semicolon)
             if (index+1 == indexOfExp1) throw Exception("Statement for but no for(;;")
-            val exp1 = if(index != indexOfExp1)parseExpression(tokens.subList(indexOfExp1,index-1)) else null
+            val exp1 = if(index != indexOfExp1)parseExpression(tokens.subList(indexOfExp1,index)) else null
             val indexOfExp2 = index+1
             index = tokens.indexOf(Token.Close)
             if (index+1 == indexOfExp2) throw Exception("Statement for but no for(;;)")
-            val exp2 = if (index != indexOfExp2)parseExpression(tokens.subList(indexOfExp2,index-1)) else null
-            val statement = parseStatement(tokens.subList(index+1 , tokens.count()-1))
+            val exp2 = if (index != indexOfExp2)parseExpression(tokens.subList(indexOfExp2,index)) else null
+            val statement = parseStatement(tokens.subList(index+1 , tokens.count()))
             return ForStatement(varDeclare , exp1,exp2,statement)
         }
         fun parseStatementBlock(tokens : List<Token>) : List<Statement>{
@@ -475,7 +479,7 @@ fun parse(tokens : List<Token>) : Statement{
             var startStatement = 1
             var endStatement = getIndexOfEndStatement(tokens,startStatement)
             while (true){
-                statements.add(parseStatement(tokens.subList(startStatement,endStatement)))
+                statements.add(parseStatement(tokens.subList(startStatement,endStatement+1)))
                 startStatement = endStatement+1
                 if (tokens[startStatement] == Token.CloseBra) break
                 endStatement = getIndexOfEndStatement(tokens,startStatement)
@@ -489,7 +493,7 @@ fun parse(tokens : List<Token>) : Statement{
                     Statement.Label(parseIdentifier(tokens[0]), parseStatement(tokens.drop(2)))
                 else Statement.VarDeclare(parseVarDeclare(tokens))
             }
-            is Token.OpenBra -> Statement.StatementBlock(parseStatementBlock(tokens.subList(1,tokens.count()-2)))
+            is Token.OpenBra -> Statement.StatementBlock(parseStatementBlock(tokens.subList(1,tokens.count()-1)))
             is Token.If -> {
                 if(tokens[1] != Token.Open)
                     throw Exception("IF Statement but it is not if (")
@@ -501,8 +505,8 @@ fun parse(tokens : List<Token>) : Statement{
                 val indexPareCloseBra = getPareClose(remainTokens , Token.OpenBra , Token.CloseBra)
                 if(indexPareCloseBra+1 == remainTokens.count()) {
                     Statement.If(
-                        parseExpression(tokens.subList(1, indexPareClose - 1)),
-                        parseStatementBlock(remainTokens.subList(1, remainTokens.count() - 2)),
+                        parseExpression(tokens.subList(1, indexPareClose)),
+                        parseStatementBlock(remainTokens.subList(1, remainTokens.count() - 1)),
                         null
                     )
                 } else if(remainTokens[indexPareCloseBra+1] == Token.Else) {
@@ -510,9 +514,9 @@ fun parse(tokens : List<Token>) : Statement{
                         throw Exception("IF Statement but it is not if (){}else{}")
                     }
                     Statement.If(
-                        parseExpression(tokens.subList(1, indexPareClose - 1)),
-                        parseStatementBlock(remainTokens.subList(1, indexPareCloseBra-1)),
-                        parseStatementBlock(remainTokens.subList(indexPareCloseBra+3 , remainTokens.count()-2))
+                        parseExpression(tokens.subList(1, indexPareClose)),
+                        parseStatementBlock(remainTokens.subList(1, indexPareCloseBra)),
+                        parseStatementBlock(remainTokens.subList(indexPareCloseBra+3 , remainTokens.count()-1))
                     )
                 }else{
                     throw Exception("IF Statement but it is not if (){}else{}")
@@ -528,8 +532,8 @@ fun parse(tokens : List<Token>) : Statement{
                     throw Exception("Do Statement but do {..} while (")
 
                 Statement.Do(
-                    parseExpression(tokens.subList(indexCloseBra+3 , tokens.count()-3)),
-                    parseStatement(tokens.subList(2,indexCloseBra-1))
+                    parseExpression(tokens.subList(indexCloseBra+3 , tokens.count()-2)),
+                    parseStatement(tokens.subList(2,indexCloseBra))
                 )
             }
             //"while"  "(" expression  ")" "{" <statement> "}" .
@@ -541,8 +545,8 @@ fun parse(tokens : List<Token>) : Statement{
                     throw Exception("Do Statement but do {..} while (")
 
                 Statement.While(
-                    parseExpression(tokens.subList(2,indexClose-1)),
-                    parseStatement(tokens.subList(indexClose+2 , tokens.count()-2))
+                    parseExpression(tokens.subList(2,indexClose)),
+                    parseStatement(tokens.subList(indexClose+2 , tokens.count()-1))
                 )
             }
             is Token.For -> Statement.For(parseForStatement(tokens))
@@ -553,7 +557,7 @@ fun parse(tokens : List<Token>) : Statement{
                 if(tokens.count() == 2) {
                     Statement.Return(null)
                 }else{
-                    Statement.Return(parseExpression(tokens.subList(1,tokens.count()-2)))
+                    Statement.Return(parseExpression(tokens.subList(1,tokens.count()-1)))
                 }
             }
             is Token.Break -> {
@@ -579,8 +583,27 @@ fun parse(tokens : List<Token>) : Statement{
                 }
             }
             is Token.Semicolon -> Statement.Semicolon
-            else -> Statement.Exp(parseExpression(tokens))
+            is Token.Print -> {
+                if(tokens[1] != Token.Open) throw Exception("Print but println(")
+                if(tokens[tokens.count()-2] != Token.Close) throw Exception("Print but println()")
+                if(tokens[tokens.count()-1] != Token.Semicolon) throw Exception("Print but println()")
+                Statement.Print(parseExpression(tokens.subList(2,tokens.count()-2)))
+            }
+            else -> {
+                if(tokens.last() != Token.Semicolon) throw Exception("Expression but no ;")
+                Statement.Exp(parseExpression(tokens.dropLast(1)))
+            }
         }
     }
-    return parseStatement(tokens)
+    val statements = mutableListOf<Statement>()
+    if(tokens.count() == 0) return statements
+    var startStatement = 0
+    var endStatement = getIndexOfEndStatement(tokens,startStatement)
+    while (true){
+        statements.add(parseStatement(tokens.subList(startStatement,endStatement+1)))
+        startStatement = endStatement+1
+        if (startStatement == tokens.count()) break
+        endStatement = getIndexOfEndStatement(tokens,startStatement)
+    }
+    return statements
 }

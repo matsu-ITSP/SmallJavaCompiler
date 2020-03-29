@@ -117,6 +117,14 @@ class TestTest {
                 "}"
     )
     @Test
+    fun testParse(){
+        fun p(s:String) = println(parse(tokenize(lex(s))).toString())
+        //p("{{1+1;}}")
+        //p("{{System.out.println(\"poi\");}}")
+        p("{{int x = 0 ; int y = x + x ;}}")
+        codes.map { p(it) }
+    }
+    @Test
     fun testLex(){
         assertEquals(
             arrayListOf("").drop(1),
@@ -188,6 +196,10 @@ class TestTest {
                     "if(1.1 < 2.2){return true} else {return false}" +
                     "}}"))
         )
+        assertEquals(
+            arrayListOf(Token.Print , Token.Open , Token.Str("poi") , Token.Close),
+            tokenize(lex("{{ System.out.println(\"poi\")}}"))
+            )
     }
     @Test
     fun testGetPareClose(){
