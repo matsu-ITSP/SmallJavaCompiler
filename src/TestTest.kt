@@ -119,10 +119,12 @@ class TestTest {
     @Test
     fun testParse(){
         fun p(s:String) = println(parse(tokenize(lex(s))).toString())
-        //p("{{1+1;}}")
-        //p("{{System.out.println(\"poi\");}}")
-        p("{{int x = 0 ; int y = x + x ;}}")
+        p("{{for(int n = 0 ; n<10 ; n++){System.out.println(n);}}}")
         codes.map { p(it) }
+        p("{{1+1;}}")
+        p("{{System.out.println(\"poi\");}}")
+        p("{{int x = 0 ; int y = x + x ;}}")
+        p("{{if(1==1){2;}}}")
     }
     @Test
     fun testLex(){

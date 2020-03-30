@@ -129,6 +129,7 @@ fun getPareClose(tokens : List<Token> , openToken: Token, closeToken: Token , be
     var depth = 0
     for(i in beginIndex until tokens.count()){
         if(tokens[i] == openToken) depth++
+        else if(depth == 0) continue;
         else if(tokens[i] == closeToken) depth--
         if(depth==0) return i
     }
@@ -458,7 +459,7 @@ fun parse(tokens : List<Token>) : List<Statement>{
             if (tokens[index] != Token.Open) throw Exception("Statement for but no for(")
             if (!tokens.contains(Token.Semicolon)) throw Exception("Statement for but no ;")
             index=tokens.indexOf(Token.Semicolon)
-            val varDeclare = if(index!=2) parseVarDeclare(tokens.subList(2,index)) else null
+            val varDeclare = if(index!=2) parseVarDeclare(tokens.subList(2,index+1)) else null
             index++
             val indexOfExp1 = index
             index += tokens.drop(index).indexOf(Token.Semicolon)
@@ -493,30 +494,32 @@ fun parse(tokens : List<Token>) : List<Statement>{
                     Statement.Label(parseIdentifier(tokens[0]), parseStatement(tokens.drop(2)))
                 else Statement.VarDeclare(parseVarDeclare(tokens))
             }
-            is Token.OpenBra -> Statement.StatementBlock(parseStatementBlock(tokens.subList(1,tokens.count()-1)))
+            is Token.OpenBra -> Statement.StatementBlock(parseStatementBlock(tokens))
             is Token.If -> {
-                if(tokens[1] != Token.Open)
+                var index = 1
+                if(tokens[index] != Token.Open)
                     throw Exception("IF Statement but it is not if (")
-                val indexPareClose = getPareClose(tokens,Token.Open,Token.Close)
-
-                val remainTokens = tokens.drop(indexPareClose+1)
-                if(remainTokens[0] != Token.OpenBra)
+                index = getPareClose(tokens,Token.Open,Token.Close)
+                val exp = parseExpression(tokens.subList(2, index))
+                index++
+                if(tokens[index] != Token.OpenBra)
                     throw Exception("IF Statement but it is not if (){")
-                val indexPareCloseBra = getPareClose(remainTokens , Token.OpenBra , Token.CloseBra)
-                if(indexPareCloseBra+1 == remainTokens.count()) {
+                val indexOpenBra = index
+                index = getPareClose(tokens , Token.OpenBra , Token.CloseBra , index)
+                if(index+1 == tokens.count()) {
                     Statement.If(
-                        parseExpression(tokens.subList(1, indexPareClose)),
-                        parseStatementBlock(remainTokens.subList(1, remainTokens.count() - 1)),
+                        exp,
+                        parseStatementBlock(tokens.subList(indexOpenBra , index+1)),
                         null
                     )
-                } else if(remainTokens[indexPareCloseBra+1] == Token.Else) {
-                    if(remainTokens[indexPareCloseBra+2] != Token.OpenBra || remainTokens[remainTokens.count()-1] != Token.CloseBra){
+                } else if(tokens[index+1] == Token.Else) {
+                    if(tokens[index+2] != Token.OpenBra || tokens[tokens.count()-1] != Token.CloseBra){
                         throw Exception("IF Statement but it is not if (){}else{}")
                     }
                     Statement.If(
-                        parseExpression(tokens.subList(1, indexPareClose)),
-                        parseStatementBlock(remainTokens.subList(1, indexPareCloseBra)),
-                        parseStatementBlock(remainTokens.subList(indexPareCloseBra+3 , remainTokens.count()-1))
+                        exp,
+                        parseStatementBlock(tokens.subList(indexOpenBra , index+1)),
+                        parseStatementBlock(tokens.subList(index+2,tokens.count()))
                     )
                 }else{
                     throw Exception("IF Statement but it is not if (){}else{}")
